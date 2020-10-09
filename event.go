@@ -385,10 +385,7 @@ var (
 // parseSimpleType wraps TdhFormatProperty to get rendered to string value of
 // @i-th event property.
 func (p *propertyParser) parseSimpleType(i int) (string, error) {
-	mapInfo, err := getMapInfo(p.record, p.info, i)
-	if err != nil {
-		return "", fmt.Errorf("failed to get map info; %w", err)
-	}
+	var mapInfo unsafe.Pointer
 
 	var propertyLength C.uint
 	ret := C.GetPropertyLength(p.record, p.info, C.int(i), &propertyLength)
