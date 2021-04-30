@@ -55,6 +55,9 @@ type SessionOptions struct {
 	// original API reference:
 	// https://docs.microsoft.com/en-us/windows/win32/api/evntrace/ns-evntrace-enable_trace_parameters
 	EnableProperties []EnableProperty
+
+	kernelSession     bool
+	KernelEnableFlags uint64
 }
 
 // Option is any function that modifies SessionOptions. Options will be called
@@ -68,6 +71,18 @@ type Option func(cfg *SessionOptions)
 func WithName(name string) Option {
 	return func(cfg *SessionOptions) {
 		cfg.Name = name
+	}
+}
+
+func withKernelSession() Option {
+	return func(cfg *SessionOptions) {
+		cfg.kernelSession = true
+	}
+}
+
+func WithKernelEnableFlags(flags uint64) Option {
+	return func(cfg *SessionOptions) {
+		cfg.KernelEnableFlags = flags
 	}
 }
 

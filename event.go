@@ -426,7 +426,8 @@ retryLoop:
 		case windows.ERROR_SUCCESS:
 			break retryLoop
 		default:
-			return "", fmt.Errorf("TdhFormatProperty failed; %w", status)
+			// Don't bail on formatting the entire object because one field failed
+			return "0", nil
 		}
 	}
 	p.data += uintptr(userDataConsumed)

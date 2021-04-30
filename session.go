@@ -60,6 +60,16 @@ type Session struct {
 	propertiesBuf  []byte
 }
 
+const KernelLoggerName = "NT Kernel Logger"
+const KernelProviderProcess uint64 = C.EVENT_TRACE_FLAG_PROCESS
+const KernelProviderTCPIP uint64 = C.EVENT_TRACE_FLAG_NETWORK_TCPIP
+
+var KernelLoggerGUID windows.GUID
+
+func init() {
+	KernelLoggerGUID, _ = windows.GUIDFromString("9e814aad-3204-11d2-9a82-006008a86939")
+}
+
 // EventCallback is any function that could handle an ETW event. EventCallback
 // is called synchronously and sequentially on every event received by Session
 // one by one.
@@ -107,6 +117,12 @@ func NewSession(providerGUID windows.GUID, options ...Option) (*Session, error) 
 	return &s, nil
 }
 
+func NewKernelSession(options ...Option) (*Session, error) {
+	options = append(options, WithName(KernelLoggerName))
+	options = append(options, withKernelSession())
+	return NewSession(KernelLoggerGUID, options...)
+}
+
 // Process starts processing of ETW events. Events will be passed to @cb
 // synchronously and sequentially. Take a look to EventCallback documentation
 // for more info about events processing.
@@ -115,8 +131,10 @@ func NewSession(providerGUID windows.GUID, options ...Option) (*Session, error) 
 func (s *Session) Process(cb EventCallback) error {
 	s.callback = cb
 
-	if err := s.subscribeToProvider(); err != nil {
-		return fmt.Errorf("failed to subscribe to provider; %w", err)
+	if !s.config.kernelSession {
+		if err := s.subscribeToProvider(); err != nil {
+			return fmt.Errorf("failed to subscribe to provider; %w", err)
+		}
 	}
 
 	cgoKey := newCallbackKey(s)
@@ -227,6 +245,10 @@ func (s *Session) createETWSession() error {
 	pProperties.Wnode.BufferSize = C.ulong(bufSize)
 	pProperties.Wnode.ClientContext = 1 // QPC for event Timestamp
 	pProperties.Wnode.Flags = C.WNODE_FLAG_TRACED_GUID
+
+	if s.config.kernelSession {
+		pProperties.EnableFlags = C.ulong(s.config.KernelEnableFlags)
+	}
 
 	// Mark that we are going to process events in real time using a callback.
 	pProperties.LogFileMode = C.EVENT_TRACE_REAL_TIME_MODE
