@@ -18,6 +18,7 @@ package etw
 import "C"
 import (
 	"fmt"
+	"math"
 	"math/rand"
 	"sync"
 	"sync/atomic"
@@ -26,6 +27,9 @@ import (
 
 	"golang.org/x/sys/windows"
 )
+
+// The C version of this const uses a uint64 overflow, which Go on arm64 doesn't like
+const INVALID_PROCESSTRACE_HANDLE = math.MaxUint64
 
 // ExistsError is returned by NewSession if the session name is already taken.
 //
@@ -344,7 +348,7 @@ func (s *Session) processEvents(callbackContextKey uintptr) error {
 		(C.LPWSTR)(unsafe.Pointer(&s.etwSessionName[0])),
 		(C.PVOID)(callbackContextKey),
 	)
-	if C.INVALID_PROCESSTRACE_HANDLE == traceHandle {
+	if INVALID_PROCESSTRACE_HANDLE == uint64(traceHandle) {
 		return fmt.Errorf("OpenTraceW failed; %w", windows.GetLastError())
 	}
 
