@@ -344,9 +344,18 @@ func (s *Session) unsubscribeFromProvider() error {
 // processEvents subscribes to the actual provider events and starts its processing.
 func (s *Session) processEvents(callbackContextKey uintptr) error {
 	// Ref: https://docs.microsoft.com/en-us/windows/win32/api/evntrace/nf-evntrace-opentracew
+	//
+	// callbackContextKey is a small synthetic key (1, 2, ...) used to look the
+	// Session back up in the global map from the C callback. It is NOT a real
+	// pointer. Passing it as a C pointer type (PVOID) puts the small integer into
+	// a pointer-typed stack slot; if the goroutine's stack is copied (grown) at
+	// that instant, the runtime stack scanner sees 0 < key < minLegalPointer and
+	// fatally throws "invalid pointer found on stack". Pass it as an integer
+	// (C.ULONG_PTR) instead so it is never treated as a pointer; OpenTraceHelper
+	// casts it back to PVOID on the C side.
 	traceHandle := C.OpenTraceHelper(
 		(C.LPWSTR)(unsafe.Pointer(&s.etwSessionName[0])),
-		(C.PVOID)(callbackContextKey),
+		(C.ULONG_PTR)(callbackContextKey),
 	)
 	if INVALID_PROCESSTRACE_HANDLE == uint64(traceHandle) {
 		return fmt.Errorf("OpenTraceW failed; %w", windows.GetLastError())

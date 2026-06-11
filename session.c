@@ -12,10 +12,12 @@ void WINAPI stdcallHandleEvent(PEVENT_RECORD e) {
 
 // OpenTraceHelper helps to access EVENT_TRACE_LOGFILEW union fields and pass
 // pointer to C not warning CGO checker.
-TRACEHANDLE OpenTraceHelper(LPWSTR name, PVOID ctx) {
+TRACEHANDLE OpenTraceHelper(LPWSTR name, ULONG_PTR ctx) {
     EVENT_TRACE_LOGFILEW trace = {0};
     trace.LoggerName = name;
-    trace.Context = ctx;
+    // ctx arrives as an integer key; cast back to the PVOID Context field here,
+    // on the C side, so the value never crosses the cgo boundary as a pointer.
+    trace.Context = (PVOID)ctx;
     trace.ProcessTraceMode = PROCESS_TRACE_MODE_REAL_TIME | PROCESS_TRACE_MODE_EVENT_RECORD;
     trace.EventRecordCallback = stdcallHandleEvent;
 
